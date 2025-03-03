@@ -23,6 +23,20 @@ const healthRoutes = require('./routes/health');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Increase header size limits directly in Express
+app.use((req, res, next) => {
+  // Increase Express's internal header size limits
+  req.connection.setMaxHeadersCount = 100; // Default is usually 50
+  
+  // For debugging - log headers for auth endpoints
+  if (req.url.includes('/auth/')) {
+    console.log('Auth request headers:', Object.keys(req.headers));
+    console.log('Header size:', JSON.stringify(req.headers).length, 'bytes');
+  }
+  
+  next();
+});
+
 // Configure CORS to be more permissive but secure
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 

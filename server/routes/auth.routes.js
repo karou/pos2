@@ -6,12 +6,42 @@ const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
 const User = require('../models/User');
 
+const cleanupRequest = (req, res, next) => {
+  // For auth routes, clean up headers to minimize size issues
+  const headerSize = JSON.stringify(req.headers).length;
+  
+  if (headerSize > 8192) { // 8KB warning threshold
+    console.log(`Large headers detected (${headerSize} bytes), cleaning up...`);
+    
+    // Keep only essential headers
+    const essentialHeaders = {};
+    const keysToKeep = ['host', 'content-type', 'content-length', 'user-agent'];
+    
+    for (const key of keysToKeep) {
+      if (req.headers[key]) {
+        essentialHeaders[key] = req.headers[key];
+      }
+    }
+    
+    // Preserve auth token if present
+    if (req.headers['x-auth-token']) {
+      essentialHeaders['x-auth-token'] = req.headers['x-auth-token'];
+    }
+    
+    // Replace headers with cleaned version
+    req.headers = essentialHeaders;
+    console.log(`Headers cleaned, new size: ${JSON.stringify(req.headers).length} bytes`);
+  }
+  
+  next();
+};
+
 /**
  * @route   POST /api/auth/login
  * @desc    Authenticate user & get token
  * @access  Public
  */
-router.post('/login', async (req, res) => {
+router.post('/login', cleanupRequest, async (req, res) => {
   try {
     const { email, password } = req.body;
 
