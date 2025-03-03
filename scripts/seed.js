@@ -8,12 +8,15 @@ const Customer = require('../server/models/Customer');
 const Order = require('../server/models/Order');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, {
+// Construct connection string with auth credentials
+const mongoUri = process.env.MONGO_URI.includes('@') 
+  ? process.env.MONGO_URI 
+  : process.env.MONGO_URI.replace('mongodb://', `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@`) + '?authSource=' + (process.env.MONGO_AUTH_SOURCE || 'admin');
+
+console.log('Connecting to MongoDB with auth...');
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-  user: process.env.MONGO_USER,
-  pass: process.env.MONGO_PASSWORD,
-  authSource: process.env.MONGO_AUTH_SOURCE || 'admin'
+  useUnifiedTopology: true
 })
 .then(() => console.log('MongoDB connected for seeding'))
 .catch(err => {
