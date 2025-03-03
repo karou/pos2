@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  # Node.js API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/mayurapos
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://rabbitmq
+      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_EXPIRES_IN=7d
+    networks:
+      - mayurapos-network
+
+  # Order Microservice
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - rabbitmq
+    environment:
+      - NODE_ENV=development
+      - SERVICE_NAME=order-service
+      - SERVICE_ENTRY=server/microservices/order-service/index.js
+      - PORT=3001
+      - MONGO_URI=mongodb://mongodb:27017/mayurapos
+      - RABBITMQ_URL=amqp://rabbitmq
+    networks:
+      - mayurapos-network
+
+  # Inventory Microservice
+  inventory-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - rabbitmq
+    environment:
+      - NODE_ENV=development
+      - SERVICE_NAME=inventory-service
+      - SERVICE_ENTRY=server/microservices/inventory-service/index.js
+      - PORT=3002
+      - MONGO_URI=mongodb://mongodb:27017/mayurapos
+      - RABBITMQ_URL=amqp://rabbitmq
+    networks:
+      - mayurapos-network
+
+  # Notification Microservice
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - rabbitmq
+    environment:
+      - NODE_ENV=development
+      - SERVICE_NAME=notification-service
+      - SERVICE_ENTRY=server/microservices/notification-service/index.js
+      - PORT=3003
+      - MONGO_URI=mongodb://mongodb:27017/mayurapos
+      - RABBITMQ_URL=amqp://rabbitmq
+    networks:
+      - mayurapos-network
+
+  # React Client
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3006:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000/api
+    depends_on:
+      - api
+    networks:
+      - mayurapos-network
+
+  # MongoDB
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - mayurapos-network
+
+  # Redis
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - mayurapos-network
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - mayurapos-network
+
+networks:
+  mayurapos-network:
+    driver: bridge
+
+volumes:
+  mongodb-data:
+  redis-data:
+  rabbitmq-data:
