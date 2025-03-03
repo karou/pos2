@@ -1,0 +1,81 @@
+.dashboard-container {
+  padding-bottom: 2rem;
+}
+
+.page-title {
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.stats-card {
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+}
+
+.stats-card .card-body {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.stats-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-right: 1rem;
+  color: white;
+}
+
+.sales-icon {
+  background-color: #3498db;
+}
+
+.orders-icon {
+  background-color: #2ecc71;
+}
+
+.products-icon {
+  background-color: #f39c12;
+}
+
+.customers-icon {
+  background-color: #9b59b6;
+}
+
+.stats-info h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: #2c3e50;
+}
+
+.stats-info p {
+  margin-bottom: 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.table th {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}

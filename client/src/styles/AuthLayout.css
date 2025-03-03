@@ -1,0 +1,33 @@
+.auth-layout {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #3498db, #2c3e50);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 70%);
+  z-index: 0;
+}
+
+.auth-content {
+  z-index: 1;
+  width: 100%;
+  max-width: 500px;
+  padding: 2rem;
+}
+
+@media (max-width: 768px) {
+  .auth-background {
+    clip-path: polygon(0 0, 100% 0, 100% 30%, 0 0);
+  }
+}

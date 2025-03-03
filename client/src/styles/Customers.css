@@ -1,0 +1,44 @@
+.customers-container {
+  padding-bottom: 2rem;
+}
+
+.page-title {
+  margin-bottom: 0;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.table th {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.customer-details h5 {
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.detail-section {
+  margin-bottom: 1.5rem;
+}
+
+.detail-section h6 {
+  color: #3498db;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.detail-section p {
+  margin-bottom: 0.25rem;
+}
+
+address {
+  margin-bottom: 0;
+}

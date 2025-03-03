@@ -1,3 +1,4 @@
+// server/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -9,6 +10,7 @@ const { connectDB } = require('./config/db');
 const { setupRedis } = require('./config/redis');
 const { setupRabbitMQ } = require('./config/rabbitmq');
 const logger = require('./utils/logger');
+const headerSizeMiddleware = require('./middleware/headerSizeMiddleware');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -21,18 +23,37 @@ const healthRoutes = require('./routes/health');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
-app.use(helmet());
+// Configure CORS to be more permissive but secure
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.CLIENT_URL || 'http://localhost:3006' // Restrict in production
+    : '*', // Allow all in development
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-auth-token'],
+  credentials: false, // Don't allow cookies by default
+  maxAge: 86400 // 24 hours
+};
+
+// Apply middleware
+app.use(cors(corsOptions));
+app.use(helmet({
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? true : false,
+}));
+
+// Increase JSON payload limit to handle larger requests
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// Apply header size middleware early to catch large headers
+app.use(headerSizeMiddleware);
+
 app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 // Health check endpoint
 app.use('/api/health', healthRoutes);
 
-// API Routes
+// API Routes - Fixed the route handler formats
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
