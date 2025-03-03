@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   Container, 
@@ -273,10 +273,10 @@ const POS = () => {
     }
   };
   
-  const handleCheckout = () => {
+  const handleCheckout = useCallback(() => {
     if (cartItems.length === 0) return;
     setShowPaymentModal(true);
-  };
+  }, [cartItems.length]);
   
   const handlePaymentSubmit = () => {
     const subtotal = total - discount;
@@ -428,10 +428,10 @@ const POS = () => {
     }
   };
   
-  const handleSaveOrder = () => {
+  const handleSaveOrder = useCallback(() => {
     if (cartItems.length === 0) return;
     setShowSaveOrderModal(true);
-  };
+  }, [cartItems.length]);
   
   const confirmSaveOrder = () => {
     const savedOrder = {
