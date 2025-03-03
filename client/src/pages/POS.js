@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   Container, 
@@ -13,7 +13,9 @@ import {
   Badge,
   Tabs,
   Tab,
-  Dropdown
+  Dropdown,
+  OverlayTrigger,
+  Tooltip
 } from 'react-bootstrap';
 import { 
   FaSearch, 
@@ -26,7 +28,11 @@ import {
   FaPrint, 
   FaSave, 
   FaList,
-  FaShoppingBag
+  FaShoppingBag,
+  FaBarcode,
+  FaKeyboard,
+  FaMoon,
+  FaSun
 } from 'react-icons/fa';
 import { getProducts } from '../actions/productActions';
 import { addToCart, removeFromCart, updateCartItem, clearCart } from '../actions/cartActions';
@@ -58,7 +64,13 @@ const POS = () => {
   const [showSavedOrdersModal, setShowSavedOrdersModal] = useState(false);
   const [currentOrderName, setCurrentOrderName] = useState('');
   const [showSaveOrderModal, setShowSaveOrderModal] = useState(false);
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [showKeyboardShortcutsModal, setShowKeyboardShortcutsModal] = useState(false);
+  const [darkMode, setDarkMode] = useState(localStorage.getItem('pos-dark-mode') === 'true');
   const receiptRef = useRef(null);
+  const barcodeInputRef = useRef(null);
+  const searchInputRef = useRef(null);
   
   // Load products and customers on component mount
   useEffect(() => {
@@ -73,6 +85,16 @@ const POS = () => {
       setCategories(uniqueCategories.filter(Boolean));
     }
   }, [products]);
+  
+  // Apply dark mode class to body
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+    localStorage.setItem('pos-dark-mode', darkMode);
+  }, [darkMode]);
   
   // Filter products based on search term
   useEffect(() => {
@@ -319,6 +341,100 @@ const POS = () => {
     setShowSavedOrdersModal(false);
   };
   
+  const handleBarcodeSubmit = () => {
+    if (!barcodeInput) return;
+    
+    // Find product by barcode
+    const product = products.find(p => 
+      p.barcode === barcodeInput || 
+      p.sku === barcodeInput
+    );
+    
+    if (product) {
+      handleAddToCart(product);
+      setBarcodeInput('');
+    } else {
+      alert('Product not found');
+    }
+    
+    // Keep focus on input for continuous scanning
+    if (barcodeInputRef.current) {
+      barcodeInputRef.current.focus();
+    }
+  };
+  
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+  
+  // Keyboard shortcuts handler
+  const handleKeyDown = useCallback((e) => {
+    // Only process if no modals are open and not typing in an input
+    const isInputActive = document.activeElement.tagName === 'INPUT' || 
+                          document.activeElement.tagName === 'TEXTAREA';
+    
+    if (showPaymentModal || showSaveOrderModal || showSavedOrdersModal || showBarcodeModal || isInputActive) {
+      return;
+    }
+    
+    switch (e.key) {
+      case 'F1':
+        e.preventDefault();
+        setShowKeyboardShortcutsModal(true);
+        break;
+      case 'F2':
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+        break;
+      case 'F3':
+        e.preventDefault();
+        setShowBarcodeModal(true);
+        setTimeout(() => {
+          if (barcodeInputRef.current) {
+            barcodeInputRef.current.focus();
+          }
+        }, 100);
+        break;
+      case 'F4':
+        e.preventDefault();
+        if (cartItems.length > 0) {
+          handleCheckout();
+        }
+        break;
+      case 'F5':
+        e.preventDefault();
+        if (cartItems.length > 0) {
+          handleSaveOrder();
+        }
+        break;
+      case 'F6':
+        e.preventDefault();
+        setShowSavedOrdersModal(true);
+        break;
+      case 'Escape':
+        e.preventDefault();
+        if (cartItems.length > 0 && window.confirm('Clear current cart?')) {
+          dispatch(clearCart());
+        }
+        break;
+      default:
+        break;
+    }
+  }, [
+    showPaymentModal, showSaveOrderModal, showSavedOrdersModal, showBarcodeModal, 
+    cartItems, dispatch, handleCheckout, handleSaveOrder
+  ]);
+  
+  // Add keyboard event listener
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+  
   const calculateChange = () => {
     if (!amountReceived) return 0;
     const finalTotal = (total - discount) * 1.1; // Apply tax after discount
@@ -341,26 +457,66 @@ const POS = () => {
   };
   
   return (
-    <Container fluid className="pos-container">
+    <Container fluid className={`pos-container ${darkMode ? 'dark-mode' : ''}`}>
       <Row>
         {/* Products Section */}
         <Col md={8} className="products-section">
           <Card className="mb-3">
             <Card.Body>
               <Row>
-                <Col md={8}>
+                <Col md={7}>
                   <InputGroup>
                     <InputGroup.Text>
                       <FaSearch />
                     </InputGroup.Text>
                     <Form.Control
-                      placeholder="Search products by name, SKU or barcode..."
+                      ref={searchInputRef}
+                      placeholder="Search products by name, SKU or barcode... (F2)"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                    <OverlayTrigger
+                      placement="bottom"
+                      overlay={<Tooltip>Scan Barcode (F3)</Tooltip>}
+                    >
+                      <Button 
+                        variant="outline-secondary"
+                        onClick={() => {
+                          setShowBarcodeModal(true);
+                          setTimeout(() => {
+                            if (barcodeInputRef.current) {
+                              barcodeInputRef.current.focus();
+                            }
+                          }, 100);
+                        }}
+                      >
+                        <FaBarcode />
+                      </Button>
+                    </OverlayTrigger>
                   </InputGroup>
                 </Col>
-                <Col md={4} className="d-flex justify-content-end">
+                <Col md={5} className="d-flex justify-content-end">
+                  <OverlayTrigger
+                    placement="bottom"
+                    overlay={<Tooltip>Keyboard Shortcuts (F1)</Tooltip>}
+                  >
+                    <Button 
+                      variant="outline-secondary" 
+                      className="me-2"
+                      onClick={() => setShowKeyboardShortcutsModal(true)}
+                    >
+                      <FaKeyboard />
+                    </Button>
+                  </OverlayTrigger>
+                  
+                  <Button 
+                    variant="outline-secondary" 
+                    className="me-2"
+                    onClick={toggleDarkMode}
+                  >
+                    {darkMode ? <FaSun /> : <FaMoon />}
+                  </Button>
+                  
                   <Button 
                     variant="outline-secondary" 
                     className="me-2"
@@ -368,6 +524,7 @@ const POS = () => {
                   >
                     <FaList className="me-1" /> Saved Orders
                   </Button>
+                  
                   <Button 
                     variant="outline-primary"
                     onClick={handleSaveOrder}
@@ -980,6 +1137,92 @@ const POS = () => {
             </div>
           )}
         </Modal.Body>
+      </Modal>
+      
+      {/* Barcode Scanner Modal */}
+      <Modal show={showBarcodeModal} onHide={() => setShowBarcodeModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Scan Barcode</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={(e) => {
+            e.preventDefault();
+            handleBarcodeSubmit();
+          }}>
+            <Form.Group className="mb-3">
+              <Form.Label>Enter or scan barcode</Form.Label>
+              <InputGroup>
+                <InputGroup.Text>
+                  <FaBarcode />
+                </InputGroup.Text>
+                <Form.Control
+                  ref={barcodeInputRef}
+                  type="text"
+                  placeholder="Scan or enter barcode/SKU..."
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  autoFocus
+                />
+                <Button type="submit" variant="primary">
+                  Add
+                </Button>
+              </InputGroup>
+            </Form.Group>
+          </Form>
+          <div className="text-center mt-4">
+            <p className="text-muted">
+              <small>
+                Position your barcode scanner over the product's barcode and scan.
+                <br />
+                The product will be automatically added to the cart.
+              </small>
+            </p>
+          </div>
+        </Modal.Body>
+      </Modal>
+      
+      {/* Keyboard Shortcuts Modal */}
+      <Modal show={showKeyboardShortcutsModal} onHide={() => setShowKeyboardShortcutsModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Keyboard Shortcuts</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <ListGroup variant="flush">
+            <ListGroup.Item className="d-flex justify-content-between align-items-center">
+              <span><strong>F1</strong></span>
+              <span>Show keyboard shortcuts</span>
+            </ListGroup.Item>
+            <ListGroup.Item className="d-flex justify-content-between align-items-center">
+              <span><strong>F2</strong></span>
+              <span>Focus search box</span>
+            </ListGroup.Item>
+            <ListGroup.Item className="d-flex justify-content-between align-items-center">
+              <span><strong>F3</strong></span>
+              <span>Open barcode scanner</span>
+            </ListGroup.Item>
+            <ListGroup.Item className="d-flex justify-content-between align-items-center">
+              <span><strong>F4</strong></span>
+              <span>Checkout</span>
+            </ListGroup.Item>
+            <ListGroup.Item className="d-flex justify-content-between align-items-center">
+              <span><strong>F5</strong></span>
+              <span>Hold order</span>
+            </ListGroup.Item>
+            <ListGroup.Item className="d-flex justify-content-between align-items-center">
+              <span><strong>F6</strong></span>
+              <span>View saved orders</span>
+            </ListGroup.Item>
+            <ListGroup.Item className="d-flex justify-content-between align-items-center">
+              <span><strong>ESC</strong></span>
+              <span>Clear cart</span>
+            </ListGroup.Item>
+          </ListGroup>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowKeyboardShortcutsModal(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
       
       {/* Hidden receipt template for printing */}

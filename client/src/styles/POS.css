@@ -1,6 +1,112 @@
 .pos-container {
   height: calc(100vh - 70px);
   overflow: hidden;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Dark mode styles */
+body.dark-mode,
+.dark-mode {
+  background-color: #1a1a1a;
+  color: #f0f0f0;
+}
+
+.dark-mode .card {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+.dark-mode .list-group-item {
+  background-color: #2a2a2a;
+  border-color: #444;
+  color: #f0f0f0;
+}
+
+.dark-mode .modal-content {
+  background-color: #2a2a2a;
+  border-color: #444;
+  color: #f0f0f0;
+}
+
+.dark-mode .modal-header {
+  border-bottom-color: #444;
+}
+
+.dark-mode .modal-footer {
+  border-top-color: #444;
+}
+
+.dark-mode .form-control,
+.dark-mode .input-group-text {
+  background-color: #333;
+  border-color: #555;
+  color: #f0f0f0;
+}
+
+.dark-mode .form-control:focus {
+  background-color: #3a3a3a;
+  color: #fff;
+}
+
+.dark-mode .btn-outline-secondary {
+  color: #adb5bd;
+  border-color: #6c757d;
+}
+
+.dark-mode .btn-outline-secondary:hover {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.dark-mode .text-muted {
+  color: #adb5bd !important;
+}
+
+.dark-mode .product-card {
+  border-color: #444;
+}
+
+.dark-mode .product-card-content {
+  background-color: #2a2a2a;
+}
+
+.dark-mode .product-price {
+  color: #8bc34a;
+}
+
+.dark-mode .product-stock {
+  color: #adb5bd;
+}
+
+.dark-mode .nav-tabs {
+  border-bottom-color: #444;
+}
+
+.dark-mode .nav-tabs .nav-link {
+  color: #adb5bd;
+}
+
+.dark-mode .nav-tabs .nav-link.active {
+  background-color: #2a2a2a;
+  border-color: #444 #444 #2a2a2a;
+  color: #fff;
+}
+
+.dark-mode .dropdown-menu {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+.dark-mode .dropdown-item {
+  color: #f0f0f0;
+}
+
+.dark-mode .dropdown-item:hover {
+  background-color: #3a3a3a;
+}
+
+.dark-mode .dropdown-item.disabled {
+  color: #6c757d;
 }
 
 .products-section, .cart-section {
@@ -227,4 +333,42 @@
 
 .saved-order-item:hover {
   background-color: #f8f9fa;
+}
+
+/* Dark mode hover styles */
+.dark-mode .saved-order-item:hover {
+  background-color: #3a3a3a;
+}
+
+/* Keyboard shortcuts styling */
+.keyboard-shortcut {
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 3px;
+  font-family: monospace;
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.dark-mode .keyboard-shortcut {
+  background-color: #3a3a3a;
+  border-color: #555;
+}
+
+/* Barcode scanner modal styling */
+.barcode-scanner-container {
+  text-align: center;
+  padding: 20px;
+}
+
+.barcode-scanner-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+  color: #6c757d;
+}
+
+.dark-mode .barcode-scanner-icon {
+  color: #adb5bd;
 }
