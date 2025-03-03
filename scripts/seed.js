@@ -10,7 +10,12 @@ const Order = require('../server/models/Order');
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  auth: {
+    username: process.env.MONGO_USER,
+    password: process.env.MONGO_PASSWORD
+  },
+  authSource: process.env.MONGO_AUTH_SOURCE || 'admin'
 })
 .then(() => console.log('MongoDB connected for seeding'))
 .catch(err => {
