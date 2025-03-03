@@ -7,22 +7,17 @@ const Category = require('../server/models/Category');
 const Customer = require('../server/models/Customer');
 const Order = require('../server/models/Order');
 
-// Connect to MongoDB
-// Hardcode credentials since they're not in .env
-const mongoUser = 'admin';
-const mongoPassword = 'password';
-const mongoAuthSource = 'admin';
+ // Connect to MongoDB
+ // Construct connection string with auth credentials
+ const mongoUri = process.env.MONGO_URI.includes('@')
+   ? process.env.MONGO_URI
+   : process.env.MONGO_URI.replace('mongodb://', `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@`) + '?authSource=' + (process.env.MONGO_AUTH_SOURCE || 'admin');
 
-// Construct connection string with auth credentials
-const mongoUri = process.env.MONGO_URI.includes('@') 
-  ? process.env.MONGO_URI 
-  : process.env.MONGO_URI.replace('mongodb://', `mongodb://${mongoUser}:${mongoPassword}@`) + '?authSource=' + mongoAuthSource;
-
-console.log('Connecting to MongoDB with auth...');
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
+ console.log('Connecting to MongoDB with auth...');
+ mongoose.connect(mongoUri, {
+   useNewUrlParser: true,
+   useUnifiedTopology: true
+ })
 .then(() => console.log('MongoDB connected for seeding'))
 .catch(err => {
   console.error('MongoDB connection error:', err);
