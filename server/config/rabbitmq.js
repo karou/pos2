@@ -6,7 +6,18 @@ let connection;
 
 const setupRabbitMQ = async () => {
   try {
-    connection = await amqp.connect(process.env.RABBITMQ_URL);
+    // Use default credentials if not provided in env
+    const rabbitUser = process.env.RABBITMQ_USER || 'guest';
+    const rabbitPassword = process.env.RABBITMQ_PASSWORD || 'guest';
+    const rabbitHost = process.env.RABBITMQ_HOST || 'localhost';
+    const rabbitPort = process.env.RABBITMQ_PORT || 5672;
+    const rabbitVHost = process.env.RABBITMQ_VHOST || '/';
+    
+    // Construct URL with credentials
+    const rabbitUrl = `amqp://${rabbitUser}:${rabbitPassword}@${rabbitHost}:${rabbitPort}/${rabbitVHost}`;
+    
+    logger.info('Connecting to RabbitMQ...');
+    connection = await amqp.connect(rabbitUrl);
     channel = await connection.createChannel();
     
     // Define queues
@@ -19,13 +30,18 @@ const setupRabbitMQ = async () => {
     return { channel, connection };
   } catch (error) {
     logger.error(`Error connecting to RabbitMQ: ${error.message}`);
-    process.exit(1);
+    // Don't exit process, just return null
+    return null;
   }
 };
 
 const getChannel = () => {
   if (!channel) {
-    throw new Error('RabbitMQ channel not initialized');
+    logger.warn('RabbitMQ channel not initialized, attempting to reconnect');
+    setupRabbitMQ().catch(err => {
+      logger.error(`Failed to reconnect to RabbitMQ: ${err.message}`);
+    });
+    return null;
   }
   return channel;
 };
