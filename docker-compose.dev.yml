@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: mayurapos-mongodb-dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data-dev:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=mayurapos
+    restart: unless-stopped
+    networks:
+      - mayurapos-network-dev
+
+  # Redis
+  redis:
+    image: redis:alpine
+    container_name: mayurapos-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-dev:/data
+    command: redis-server --requirepass password
+    restart: unless-stopped
+    networks:
+      - mayurapos-network-dev
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mayurapos-rabbitmq-dev
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data-dev:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=password
+    restart: unless-stopped
+    networks:
+      - mayurapos-network-dev
+
+networks:
+  mayurapos-network-dev:
+    driver: bridge
+
+volumes:
+  mongodb-data-dev:
+  redis-data-dev:
+  rabbitmq-data-dev:

@@ -18,8 +18,17 @@
     "start:notification-service": "node server/microservices/notification-service/index.js",
     "start:all-services": "concurrently \"npm run start\" \"npm run start:order-service\" \"npm run start:inventory-service\" \"npm run start:notification-service\"",
     "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up",
-    "docker:down": "docker-compose down"
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:restart": "docker-compose restart",
+    "docker:logs": "docker-compose logs",
+    "docker:status": "docker-compose ps",
+    "docker:utils": "node scripts/docker-utils.js",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "docker:backup": "node -e \"require('./scripts/docker-utils').backupMongoDB()\"",
+    "docker:restore": "node -e \"require('./scripts/docker-utils').restoreMongoDB()\"",
+    "docker:prune": "docker system prune -f"
   },
   "keywords": [
     "pos",
