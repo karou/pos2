@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   Container, 
@@ -32,7 +32,11 @@ import {
   FaBarcode,
   FaKeyboard,
   FaMoon,
-  FaSun
+  FaSun,
+  FaHistory,
+  FaWifi,
+  FaWifiSlash,
+  FaCalculator
 } from 'react-icons/fa';
 import { getProducts } from '../actions/productActions';
 import { addToCart, removeFromCart, updateCartItem, clearCart } from '../actions/cartActions';
@@ -68,6 +72,13 @@ const POS = () => {
   const [barcodeInput, setBarcodeInput] = useState('');
   const [showKeyboardShortcutsModal, setShowKeyboardShortcutsModal] = useState(false);
   const [darkMode, setDarkMode] = useState(localStorage.getItem('pos-dark-mode') === 'true');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+  const [transactionHistory, setTransactionHistory] = useState([]);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [calculatorExpression, setCalculatorExpression] = useState('');
+  const [calculatorResult, setCalculatorResult] = useState('');
+  const [quickActions, setQuickActions] = useState([]);
   const receiptRef = useRef(null);
   const barcodeInputRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -95,6 +106,54 @@ const POS = () => {
     }
     localStorage.setItem('pos-dark-mode', darkMode);
   }, [darkMode]);
+  
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  
+  // Load transaction history from localStorage
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('pos-transaction-history');
+    if (savedHistory) {
+      try {
+        setTransactionHistory(JSON.parse(savedHistory));
+      } catch (error) {
+        console.error('Error loading transaction history:', error);
+      }
+    }
+  }, []);
+  
+  // Load quick actions from localStorage
+  useEffect(() => {
+    const savedQuickActions = localStorage.getItem('pos-quick-actions');
+    if (savedQuickActions) {
+      try {
+        setQuickActions(JSON.parse(savedQuickActions));
+      } catch (error) {
+        console.error('Error loading quick actions:', error);
+      }
+    } else {
+      // Set default quick actions if none exist
+      const defaultQuickActions = [
+        { name: 'Discount 10%', action: 'discount', value: 10, type: 'percentage' },
+        { name: 'Discount $5', action: 'discount', value: 5, type: 'fixed' },
+        { name: 'Clear Cart', action: 'clearCart' },
+        { name: 'Add Note', action: 'addNote' }
+      ];
+      setQuickActions(defaultQuickActions);
+      localStorage.setItem('pos-quick-actions', JSON.stringify(defaultQuickActions));
+    }
+  }, []);
   
   // Filter products based on search term
   useEffect(() => {
@@ -176,10 +235,28 @@ const POS = () => {
       orderStatus: 'completed',
       cashier: user._id,
       customer: selectedCustomer ? selectedCustomer._id : null,
-      notes
+      notes,
+      timestamp: new Date().toISOString()
     };
     
-    dispatch(createOrder(orderData));
+    // Save to transaction history
+    const newHistory = [orderData, ...transactionHistory.slice(0, 99)]; // Keep last 100 transactions
+    setTransactionHistory(newHistory);
+    localStorage.setItem('pos-transaction-history', JSON.stringify(newHistory));
+    
+    // If online, send to server
+    if (isOnline) {
+      dispatch(createOrder(orderData));
+    } else {
+      // Store for later sync when back online
+      const pendingOrders = JSON.parse(localStorage.getItem('pos-pending-orders') || '[]');
+      pendingOrders.push(orderData);
+      localStorage.setItem('pos-pending-orders', JSON.stringify(pendingOrders));
+      
+      // Show offline notification
+      alert('You are currently offline. This order has been saved locally and will be synced when you reconnect.');
+    }
+    
     dispatch(clearCart());
     setShowPaymentModal(false);
     setAmountReceived('');
@@ -367,6 +444,72 @@ const POS = () => {
     setDarkMode(!darkMode);
   };
   
+  const handleQuickAction = (action) => {
+    switch (action.action) {
+      case 'discount':
+        if (action.type === 'percentage') {
+          setDiscount(total * (action.value / 100));
+        } else {
+          setDiscount(action.value);
+        }
+        break;
+      case 'clearCart':
+        if (window.confirm('Are you sure you want to clear the cart?')) {
+          dispatch(clearCart());
+        }
+        break;
+      case 'addNote':
+        const note = prompt('Enter note for this order:');
+        if (note) {
+          setNotes(notes ? `${notes}\n${note}` : note);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+  
+  const handleCalculatorInput = (value) => {
+    if (value === 'C') {
+      setCalculatorExpression('');
+      setCalculatorResult('');
+    } else if (value === '=') {
+      try {
+        // eslint-disable-next-line no-eval
+        const result = eval(calculatorExpression);
+        setCalculatorResult(result);
+        setCalculatorExpression(result.toString());
+      } catch (error) {
+        setCalculatorResult('Error');
+      }
+    } else if (value === 'backspace') {
+      setCalculatorExpression(calculatorExpression.slice(0, -1));
+    } else {
+      setCalculatorExpression(calculatorExpression + value);
+    }
+  };
+  
+  // Function to sync pending orders when back online
+  const syncPendingOrders = useCallback(() => {
+    if (isOnline) {
+      const pendingOrders = JSON.parse(localStorage.getItem('pos-pending-orders') || '[]');
+      if (pendingOrders.length > 0) {
+        pendingOrders.forEach(order => {
+          dispatch(createOrder(order));
+        });
+        localStorage.setItem('pos-pending-orders', JSON.stringify([]));
+        alert(`${pendingOrders.length} pending orders have been synced.`);
+      }
+    }
+  }, [isOnline, dispatch]);
+  
+  // Check for pending orders when coming back online
+  useEffect(() => {
+    if (isOnline) {
+      syncPendingOrders();
+    }
+  }, [isOnline, syncPendingOrders]);
+  
   // Keyboard shortcuts handler
   const handleKeyDown = useCallback((e) => {
     // Only process if no modals are open and not typing in an input
@@ -509,6 +652,46 @@ const POS = () => {
                     </Button>
                   </OverlayTrigger>
                   
+                  <OverlayTrigger
+                    placement="bottom"
+                    overlay={<Tooltip>{isOnline ? 'Online' : 'Offline'}</Tooltip>}
+                  >
+                    <Button 
+                      variant={isOnline ? "outline-success" : "outline-danger"}
+                      className="me-2"
+                      onClick={syncPendingOrders}
+                      disabled={isOnline && !localStorage.getItem('pos-pending-orders')}
+                    >
+                      {isOnline ? <FaWifi /> : <FaWifiSlash />}
+                    </Button>
+                  </OverlayTrigger>
+                  
+                  <OverlayTrigger
+                    placement="bottom"
+                    overlay={<Tooltip>Calculator</Tooltip>}
+                  >
+                    <Button 
+                      variant="outline-secondary" 
+                      className="me-2"
+                      onClick={() => setShowCalculator(!showCalculator)}
+                    >
+                      <FaCalculator />
+                    </Button>
+                  </OverlayTrigger>
+                  
+                  <OverlayTrigger
+                    placement="bottom"
+                    overlay={<Tooltip>Transaction History</Tooltip>}
+                  >
+                    <Button 
+                      variant="outline-secondary" 
+                      className="me-2"
+                      onClick={() => setShowTransactionHistory(true)}
+                    >
+                      <FaHistory />
+                    </Button>
+                  </OverlayTrigger>
+                  
                   <Button 
                     variant="outline-secondary" 
                     className="me-2"
@@ -538,18 +721,78 @@ const POS = () => {
           </Card>
           
           {/* Category Tabs */}
-          <div className="category-tabs mb-3">
-            <Tabs
-              activeKey={activeCategory}
-              onSelect={(k) => setActiveCategory(k)}
-              className="mb-3"
-            >
-              <Tab eventKey="all" title="All Products" />
-              {categories.map(category => (
-                <Tab key={category} eventKey={category} title={category} />
-              ))}
-            </Tabs>
-          </div>
+          <Row className="mb-3">
+            <Col md={8}>
+              <div className="category-tabs">
+                <Tabs
+                  activeKey={activeCategory}
+                  onSelect={(k) => setActiveCategory(k)}
+                  className="mb-3"
+                >
+                  <Tab eventKey="all" title="All Products" />
+                  {categories.map(category => (
+                    <Tab key={category} eventKey={category} title={category} />
+                  ))}
+                </Tabs>
+              </div>
+            </Col>
+            <Col md={4}>
+              <div className="quick-actions d-flex flex-wrap justify-content-end">
+                {quickActions.slice(0, 4).map((action, index) => (
+                  <Button
+                    key={index}
+                    variant="outline-secondary"
+                    size="sm"
+                    className="me-1 mb-1"
+                    onClick={() => handleQuickAction(action)}
+                  >
+                    {action.name}
+                  </Button>
+                ))}
+              </div>
+            </Col>
+          </Row>
+          
+          {/* Calculator Floating Panel */}
+          {showCalculator && (
+            <div className="calculator-panel">
+              <div className="calculator-header">
+                <span>Calculator</span>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="p-0 text-dark"
+                  onClick={() => setShowCalculator(false)}
+                >
+                  ×
+                </Button>
+              </div>
+              <div className="calculator-display">
+                <div className="calculator-expression">{calculatorExpression || '0'}</div>
+                <div className="calculator-result">{calculatorResult}</div>
+              </div>
+              <div className="calculator-buttons">
+                <Button variant="light" onClick={() => handleCalculatorInput('7')}>7</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('8')}>8</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('9')}>9</Button>
+                <Button variant="secondary" onClick={() => handleCalculatorInput('/')}>/</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('4')}>4</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('5')}>5</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('6')}>6</Button>
+                <Button variant="secondary" onClick={() => handleCalculatorInput('*')}>×</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('1')}>1</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('2')}>2</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('3')}>3</Button>
+                <Button variant="secondary" onClick={() => handleCalculatorInput('-')}>-</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('0')}>0</Button>
+                <Button variant="light" onClick={() => handleCalculatorInput('.')}>.</Button>
+                <Button variant="primary" onClick={() => handleCalculatorInput('=')}>=</Button>
+                <Button variant="secondary" onClick={() => handleCalculatorInput('+')}>+</Button>
+                <Button variant="danger" className="col-span-2" onClick={() => handleCalculatorInput('C')}>C</Button>
+                <Button variant="secondary" className="col-span-2" onClick={() => handleCalculatorInput('backspace')}>⌫</Button>
+              </div>
+            </div>
+          )}
           
           <Row className="products-grid">
             {productsLoading ? (
@@ -1223,6 +1466,90 @@ const POS = () => {
             Close
           </Button>
         </Modal.Footer>
+      </Modal>
+      
+      {/* Transaction History Modal */}
+      <Modal show={showTransactionHistory} onHide={() => setShowTransactionHistory(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Transaction History</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {transactionHistory.length > 0 ? (
+            <div className="transaction-history">
+              <div className="transaction-filters mb-3">
+                <Form.Control
+                  type="text"
+                  placeholder="Search transactions..."
+                  className="mb-2"
+                />
+                <div className="d-flex">
+                  <Form.Group className="me-2">
+                    <Form.Label>From</Form.Label>
+                    <Form.Control type="date" />
+                  </Form.Group>
+                  <Form.Group>
+                    <Form.Label>To</Form.Label>
+                    <Form.Control type="date" />
+                  </Form.Group>
+                </div>
+              </div>
+              
+              <ListGroup>
+                {transactionHistory.map((transaction, index) => (
+                  <ListGroup.Item key={index} className="transaction-item">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div>
+                        <h6>Order #{index + 1}</h6>
+                        <div className="text-muted">
+                          {new Date(transaction.timestamp).toLocaleString()} • 
+                          {transaction.items.length} items
+                        </div>
+                        <div className="mt-2">
+                          <Badge bg="primary" className="me-1">
+                            {transaction.paymentMethod === 'cash' ? 'Cash' : 
+                             transaction.paymentMethod === 'card' ? 'Card' : 'Mobile Payment'}
+                          </Badge>
+                          <Badge bg="success">
+                            ${transaction.total.toFixed(2)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="d-flex">
+                        <Button 
+                          variant="outline-secondary" 
+                          size="sm"
+                          className="me-2"
+                          onClick={() => {
+                            handlePrintReceipt(transaction);
+                          }}
+                        >
+                          <FaPrint />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="transaction-details mt-2">
+                      <small>
+                        {transaction.items.slice(0, 3).map((item, idx) => (
+                          <span key={idx} className="me-2">
+                            {item.name} x{item.quantity}
+                          </span>
+                        ))}
+                        {transaction.items.length > 3 && (
+                          <span>+{transaction.items.length - 3} more</span>
+                        )}
+                      </small>
+                    </div>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            </div>
+          ) : (
+            <div className="text-center py-5">
+              <p>No transaction history</p>
+            </div>
+          )}
+        </Modal.Body>
       </Modal>
       
       {/* Hidden receipt template for printing */}
