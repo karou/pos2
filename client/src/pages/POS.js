@@ -53,8 +53,9 @@ const formStyles = `
   
   .auth-form {
     width: 100%;
-    max-width: 450px;
+    max-width: 550px;
     margin: 0 auto;
+    padding: 30px;
   }
   
   .auth-form .form-control {
@@ -66,9 +67,28 @@ const formStyles = `
     width: 100%;
   }
   
+  .auth-form .form-label {
+    font-weight: 500;
+  }
+  
+  .auth-form .btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+  }
+  
+  .auth-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+  }
+  
   @media (max-width: 576px) {
     .auth-form {
-      width: 90%;
+      width: 95%;
+      padding: 20px;
     }
   }
 `;
@@ -1220,6 +1240,7 @@ const POS = () => {
                       value={customerSearchTerm}
                       onChange={handleCustomerSearch}
                       className="form-control-wide"
+                      style={{ width: '100%' }}
                     />
                     
                     {showCustomerDropdown && filteredCustomers.length > 0 && (
@@ -1252,6 +1273,7 @@ const POS = () => {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="form-control-wide"
+                  style={{ width: '100%' }}
                 />
               </Form.Group>
             </Col>
@@ -1298,6 +1320,7 @@ const POS = () => {
                       value={amountReceived}
                       onChange={(e) => setAmountReceived(e.target.value)}
                       className="form-control-wide"
+                      style={{ width: '100%' }}
                     />
                   </Form.Group>
                   
@@ -1360,6 +1383,7 @@ const POS = () => {
               value={currentOrderName}
               onChange={(e) => setCurrentOrderName(e.target.value)}
               className="form-control-wide"
+              style={{ width: '100%' }}
             />
             <Form.Text className="text-muted">
               Give this order a name to easily identify it later.
