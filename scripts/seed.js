@@ -282,6 +282,7 @@ const seedDatabase = async () => {
       date.setDate(date.getDate() - Math.floor(Math.random() * 30));
       
       orders.push({
+        orderNumber: `ORD-${(i + 1).toString().padStart(5, '0')}`,
         customer: customer._id,
         items: orderProducts,
         subtotal,
