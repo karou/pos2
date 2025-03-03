@@ -44,6 +44,46 @@ import { createOrder } from '../actions/orderActions';
 import { getCustomers, searchCustomers } from '../actions/customerActions';
 import '../styles/POS.css';
 
+// Add custom styles for login form
+const formStyles = `
+  .form-control-wide {
+    width: 100%;
+    min-width: 300px;
+  }
+  
+  .auth-form {
+    width: 100%;
+    max-width: 450px;
+    margin: 0 auto;
+  }
+  
+  .auth-form .form-control {
+    width: 100%;
+    min-width: 300px;
+  }
+  
+  .auth-form .form-group {
+    width: 100%;
+  }
+  
+  @media (max-width: 576px) {
+    .auth-form {
+      width: 90%;
+    }
+  }
+`;
+
+// Inject custom styles
+useEffect(() => {
+  const styleElement = document.createElement('style');
+  styleElement.innerHTML = formStyles;
+  document.head.appendChild(styleElement);
+  
+  return () => {
+    document.head.removeChild(styleElement);
+  };
+}, []);
+
 const POS = () => {
   const dispatch = useDispatch();
   const { products, loading: productsLoading } = useSelector(state => state.products);
@@ -1180,6 +1220,7 @@ const POS = () => {
                       placeholder="Search customer..."
                       value={customerSearchTerm}
                       onChange={handleCustomerSearch}
+                      className="form-control-wide"
                     />
                     
                     {showCustomerDropdown && filteredCustomers.length > 0 && (
@@ -1211,6 +1252,7 @@ const POS = () => {
                   placeholder="Add notes to this order..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
+                  className="form-control-wide"
                 />
               </Form.Group>
             </Col>
@@ -1256,6 +1298,7 @@ const POS = () => {
                       step="0.01"
                       value={amountReceived}
                       onChange={(e) => setAmountReceived(e.target.value)}
+                      className="form-control-wide"
                     />
                   </Form.Group>
                   
@@ -1317,6 +1360,7 @@ const POS = () => {
               placeholder="Enter a name for this order"
               value={currentOrderName}
               onChange={(e) => setCurrentOrderName(e.target.value)}
+              className="form-control-wide"
             />
             <Form.Text className="text-muted">
               Give this order a name to easily identify it later.
