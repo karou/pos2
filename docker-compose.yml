@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Node.js API Service
   api:
@@ -18,10 +16,11 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - MONGO_URI=mongodb://mongodb:27017/mayurapos
+      - MONGO_URI=mongodb://admin:password@mongodb:27017/mayurapos?authSource=admin
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - RABBITMQ_URL=amqp://rabbitmq
+      - REDIS_PASSWORD=password
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq
       - JWT_SECRET=your_jwt_secret_key_here
       - JWT_EXPIRES_IN=7d
     networks:
@@ -110,31 +109,42 @@ services:
   # MongoDB
   mongodb:
     image: mongo:latest
+    container_name: mayurapos-mongodb
     ports:
       - "27017:27017"
     volumes:
       - mongodb-data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=mayurapos
     networks:
       - mayurapos-network
 
   # Redis
   redis:
     image: redis:alpine
+    container_name: mayurapos-redis
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
+    command: redis-server --requirepass password
     networks:
       - mayurapos-network
 
   # RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management
+    container_name: mayurapos-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=password
     networks:
       - mayurapos-network
 

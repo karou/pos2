@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# Node.js
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Build files
+/build
+/dist
+
+# Docker
+Dockerfile
+Dockerfile.microservice
+docker-compose.yml
+docker-compose.dev.yml
+.dockerignore
+
+# Logs
+logs
+*.log
+
+# Backups
+/backups
+
+# OS specific
+.DS_Store
+Thumbs.db

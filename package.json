@@ -13,6 +13,7 @@
     "build": "cd client && npm run build",
     "test": "jest",
     "seed": "node scripts/seed.js",
+    "setup": "node setup.js",
     "start:order-service": "node server/microservices/order-service/index.js",
     "start:inventory-service": "node server/microservices/inventory-service/index.js",
     "start:notification-service": "node server/microservices/notification-service/index.js",

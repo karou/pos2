@@ -70,3 +70,9 @@ typings/
 
 # Redis dump file
 dump.rdb
+
+# Docker
+/backups
+
+# MongoDB data
+/data

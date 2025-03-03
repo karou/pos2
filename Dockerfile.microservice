@@ -4,8 +4,15 @@ WORKDIR /app
 
 COPY package*.json ./
 
+# Install dependencies
 RUN npm install
 
+# Copy application code
 COPY . .
 
+# Add healthcheck based on service type
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/health || exit 1
+
+# Start the microservice using the environment variable
 CMD ["sh", "-c", "node ${SERVICE_ENTRY}"]

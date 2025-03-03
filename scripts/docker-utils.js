@@ -22,12 +22,21 @@ function executeCommand(command) {
   }
 }
 
-// Function to check if Docker is installed
+// Function to check if Docker is installed and running
 function checkDocker() {
   try {
     executeCommand('docker --version');
     executeCommand('docker-compose --version');
-    return true;
+    
+    // Check if Docker daemon is running
+    try {
+      executeCommand('docker info');
+      return true;
+    } catch (error) {
+      console.error('Docker daemon is not running.');
+      console.error('Please start Docker Desktop or Docker service before continuing.');
+      return false;
+    }
   } catch (error) {
     console.error('Docker or Docker Compose is not installed.');
     console.error('Please install Docker and Docker Compose before continuing.');
