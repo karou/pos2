@@ -73,17 +73,6 @@ const formStyles = `
   }
 `;
 
-// Inject custom styles
-useEffect(() => {
-  const styleElement = document.createElement('style');
-  styleElement.innerHTML = formStyles;
-  document.head.appendChild(styleElement);
-  
-  return () => {
-    document.head.removeChild(styleElement);
-  };
-}, []);
-
 const POS = () => {
   const dispatch = useDispatch();
   const { products, loading: productsLoading } = useSelector(state => state.products);
@@ -137,14 +126,24 @@ const POS = () => {
     }
   }, [products]);
   
-  // Apply dark mode class to body
+  // Apply dark mode class to body and inject custom styles
   useEffect(() => {
+    // Apply dark mode
     if (darkMode) {
       document.body.classList.add('dark-mode');
     } else {
       document.body.classList.remove('dark-mode');
     }
     localStorage.setItem('pos-dark-mode', darkMode);
+    
+    // Inject custom styles
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = formStyles;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
   }, [darkMode]);
   
   // Monitor online/offline status
