@@ -35,7 +35,7 @@ import {
   FaSun,
   FaHistory,
   FaWifi,
-  FaWifiSlash,
+  FaPowerOff,
   FaCalculator
 } from 'react-icons/fa';
 import { getProducts } from '../actions/productActions';
@@ -662,7 +662,7 @@ const POS = () => {
                       onClick={syncPendingOrders}
                       disabled={isOnline && !localStorage.getItem('pos-pending-orders')}
                     >
-                      {isOnline ? <FaWifi /> : <FaWifiSlash />}
+                      {isOnline ? <FaWifi /> : <FaPowerOff />}
                     </Button>
                   </OverlayTrigger>
                   
