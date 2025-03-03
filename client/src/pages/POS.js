@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   Container, 
@@ -9,9 +9,25 @@ import {
   Button, 
   ListGroup,
   InputGroup,
-  Modal
+  Modal,
+  Badge,
+  Tabs,
+  Tab,
+  Dropdown
 } from 'react-bootstrap';
-import { FaSearch, FaPlus, FaMinus, FaTrash, FaCreditCard, FaMoneyBill, FaMobile } from 'react-icons/fa';
+import { 
+  FaSearch, 
+  FaPlus, 
+  FaMinus, 
+  FaTrash, 
+  FaCreditCard, 
+  FaMoneyBill, 
+  FaMobile, 
+  FaPrint, 
+  FaSave, 
+  FaList,
+  FaShoppingBag
+} from 'react-icons/fa';
 import { getProducts } from '../actions/productActions';
 import { addToCart, removeFromCart, updateCartItem, clearCart } from '../actions/cartActions';
 import { createOrder } from '../actions/orderActions';
@@ -36,12 +52,27 @@ const POS = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
+  const [savedOrders, setSavedOrders] = useState([]);
+  const [showSavedOrdersModal, setShowSavedOrdersModal] = useState(false);
+  const [currentOrderName, setCurrentOrderName] = useState('');
+  const [showSaveOrderModal, setShowSaveOrderModal] = useState(false);
+  const receiptRef = useRef(null);
   
   // Load products and customers on component mount
   useEffect(() => {
     dispatch(getProducts());
     dispatch(getCustomers());
   }, [dispatch]);
+  
+  // Extract unique categories from products
+  useEffect(() => {
+    if (products) {
+      const uniqueCategories = [...new Set(products.map(product => product.category))];
+      setCategories(uniqueCategories.filter(Boolean));
+    }
+  }, [products]);
   
   // Filter products based on search term
   useEffect(() => {
@@ -72,9 +103,21 @@ const POS = () => {
     }
   }, [customerSearchTerm, customers]);
   
-  const handleAddToCart = (product) => {
+  const handleAddToCart = (product, quantity = 1) => {
     if (product.stock > 0) {
-      dispatch(addToCart(product));
+      // Find if product is already in cart
+      const existingItem = cartItems.find(item => item._id === product._id);
+      const newQuantity = existingItem ? existingItem.quantity + quantity : quantity;
+      
+      // Make sure we don't exceed stock
+      if (newQuantity <= product.stock) {
+        if (existingItem) {
+          dispatch(updateCartItem(product._id, newQuantity));
+        } else {
+          const productWithQuantity = { ...product, quantity };
+          dispatch(addToCart(productWithQuantity));
+        }
+      }
     }
   };
   
@@ -122,6 +165,158 @@ const POS = () => {
     setCustomerSearchTerm('');
     setDiscount(0);
     setNotes('');
+    
+    // Print receipt
+    setTimeout(() => {
+      handlePrintReceipt(orderData);
+    }, 500);
+  };
+  
+  const handlePrintReceipt = (orderData) => {
+    if (receiptRef.current) {
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Receipt</title>
+            <style>
+              body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 20px; }
+              .receipt { width: 300px; margin: 0 auto; }
+              .header { text-align: center; margin-bottom: 20px; }
+              .store-name { font-size: 18px; font-weight: bold; }
+              .store-info { margin-bottom: 10px; }
+              .divider { border-top: 1px dashed #000; margin: 10px 0; }
+              .item { display: flex; justify-content: space-between; margin-bottom: 5px; }
+              .item-name { width: 60%; }
+              .item-qty { width: 10%; text-align: center; }
+              .item-price { width: 30%; text-align: right; }
+              .totals { margin-top: 10px; }
+              .total-line { display: flex; justify-content: space-between; }
+              .grand-total { font-weight: bold; }
+              .footer { text-align: center; margin-top: 20px; font-size: 10px; }
+              @media print {
+                body { margin: 0; padding: 0; }
+                .receipt { width: 100%; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="receipt">
+              <div class="header">
+                <div class="store-name">YOUR STORE NAME</div>
+                <div class="store-info">123 Main Street, City</div>
+                <div class="store-info">Phone: (123) 456-7890</div>
+                <div class="store-info">Date: ${new Date().toLocaleString()}</div>
+                ${selectedCustomer ? `<div class="store-info">Customer: ${selectedCustomer.name}</div>` : ''}
+              </div>
+              
+              <div class="divider"></div>
+              
+              <div class="items">
+                <div class="item" style="font-weight: bold;">
+                  <div class="item-name">Item</div>
+                  <div class="item-qty">Qty</div>
+                  <div class="item-price">Price</div>
+                </div>
+                ${orderData.items.map(item => `
+                  <div class="item">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-qty">${item.quantity}</div>
+                    <div class="item-price">$${(item.price * item.quantity).toFixed(2)}</div>
+                  </div>
+                `).join('')}
+              </div>
+              
+              <div class="divider"></div>
+              
+              <div class="totals">
+                <div class="total-line">
+                  <div>Subtotal:</div>
+                  <div>$${orderData.subtotal.toFixed(2)}</div>
+                </div>
+                <div class="total-line">
+                  <div>Discount:</div>
+                  <div>$${orderData.discount.toFixed(2)}</div>
+                </div>
+                <div class="total-line">
+                  <div>Tax (10%):</div>
+                  <div>$${orderData.tax.toFixed(2)}</div>
+                </div>
+                <div class="total-line grand-total">
+                  <div>TOTAL:</div>
+                  <div>$${orderData.total.toFixed(2)}</div>
+                </div>
+                <div class="total-line">
+                  <div>Payment Method:</div>
+                  <div>${orderData.paymentMethod === 'cash' ? 'Cash' : 
+                         orderData.paymentMethod === 'card' ? 'Card' : 'Mobile Payment'}</div>
+                </div>
+              </div>
+              
+              <div class="divider"></div>
+              
+              <div class="footer">
+                <p>Thank you for your purchase!</p>
+                <p>Please come again</p>
+              </div>
+            </div>
+            <script>
+              window.onload = function() { window.print(); }
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+  
+  const handleSaveOrder = () => {
+    if (cartItems.length === 0) return;
+    setShowSaveOrderModal(true);
+  };
+  
+  const confirmSaveOrder = () => {
+    const savedOrder = {
+      id: Date.now(),
+      name: currentOrderName || `Order #${savedOrders.length + 1}`,
+      items: cartItems,
+      customer: selectedCustomer,
+      discount,
+      notes,
+      timestamp: new Date().toISOString()
+    };
+    
+    setSavedOrders([...savedOrders, savedOrder]);
+    dispatch(clearCart());
+    setCurrentOrderName('');
+    setShowSaveOrderModal(false);
+    setSelectedCustomer(null);
+    setCustomerSearchTerm('');
+    setDiscount(0);
+    setNotes('');
+  };
+  
+  const handleLoadOrder = (order) => {
+    // Clear current cart first
+    dispatch(clearCart());
+    
+    // Add each item to cart
+    order.items.forEach(item => {
+      dispatch(addToCart(item));
+    });
+    
+    // Set other order details
+    if (order.customer) {
+      setSelectedCustomer(order.customer);
+      setCustomerSearchTerm(order.customer.name);
+    }
+    
+    setDiscount(order.discount || 0);
+    setNotes(order.notes || '');
+    
+    // Remove from saved orders
+    setSavedOrders(savedOrders.filter(savedOrder => savedOrder.id !== order.id));
+    setShowSavedOrdersModal(false);
   };
   
   const calculateChange = () => {
@@ -152,28 +347,63 @@ const POS = () => {
         <Col md={8} className="products-section">
           <Card className="mb-3">
             <Card.Body>
-              <InputGroup>
-                <InputGroup.Text>
-                  <FaSearch />
-                </InputGroup.Text>
-                <Form.Control
-                  placeholder="Search products by name, SKU or barcode..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </InputGroup>
+              <Row>
+                <Col md={8}>
+                  <InputGroup>
+                    <InputGroup.Text>
+                      <FaSearch />
+                    </InputGroup.Text>
+                    <Form.Control
+                      placeholder="Search products by name, SKU or barcode..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </InputGroup>
+                </Col>
+                <Col md={4} className="d-flex justify-content-end">
+                  <Button 
+                    variant="outline-secondary" 
+                    className="me-2"
+                    onClick={() => setShowSavedOrdersModal(true)}
+                  >
+                    <FaList className="me-1" /> Saved Orders
+                  </Button>
+                  <Button 
+                    variant="outline-primary"
+                    onClick={handleSaveOrder}
+                    disabled={cartItems.length === 0}
+                  >
+                    <FaSave className="me-1" /> Hold
+                  </Button>
+                </Col>
+              </Row>
             </Card.Body>
           </Card>
+          
+          {/* Category Tabs */}
+          <div className="category-tabs mb-3">
+            <Tabs
+              activeKey={activeCategory}
+              onSelect={(k) => setActiveCategory(k)}
+              className="mb-3"
+            >
+              <Tab eventKey="all" title="All Products" />
+              {categories.map(category => (
+                <Tab key={category} eventKey={category} title={category} />
+              ))}
+            </Tabs>
+          </div>
           
           <Row className="products-grid">
             {productsLoading ? (
               <div className="text-center py-5">Loading products...</div>
             ) : filteredProducts.length > 0 ? (
-              filteredProducts.map(product => (
+              filteredProducts
+                .filter(product => activeCategory === 'all' || product.category === activeCategory)
+                .map(product => (
                 <Col key={product._id} xs={6} md={4} lg={3} className="mb-3">
                   <Card 
                     className={`product-card ${product.stock <= 0 ? 'out-of-stock' : ''}`}
-                    onClick={() => handleAddToCart(product)}
                   >
                     <div className="product-img-container">
                       <img 
@@ -187,15 +417,35 @@ const POS = () => {
                         </div>
                       )}
                     </div>
-                    <Card.Body className="p-2">
-                      <h6 className="product-name">{product.name}</h6>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span className="product-price">${product.price.toFixed(2)}</span>
-                        <span className={`product-stock ${product.stock <= 5 ? 'low-stock' : ''}`}>
-                          Stock: {product.stock}
-                        </span>
-                      </div>
-                    </Card.Body>
+                    <div className="product-card-content" onClick={() => handleAddToCart(product)}>
+                      <Card.Body className="p-2">
+                        <h6 className="product-name">{product.name}</h6>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className="product-price">${product.price.toFixed(2)}</span>
+                          <span className={`product-stock ${product.stock <= 5 ? 'low-stock' : ''}`}>
+                            Stock: {product.stock}
+                          </span>
+                        </div>
+                      </Card.Body>
+                    </div>
+                    <div className="quantity-selector">
+                      <Dropdown>
+                        <Dropdown.Toggle variant="light" size="sm" className="quantity-dropdown">
+                          <FaPlus size={12} />
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          {[1, 2, 3, 5, 10].map(qty => (
+                            <Dropdown.Item 
+                              key={qty} 
+                              onClick={() => handleAddToCart(product, qty)}
+                              disabled={qty > product.stock}
+                            >
+                              Add {qty}
+                            </Dropdown.Item>
+                          ))}
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </div>
                   </Card>
                 </Col>
               ))
@@ -210,15 +460,116 @@ const POS = () => {
           <Card className="cart-card">
             <Card.Header className="bg-primary text-white d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Current Order</h5>
-              {cartItems.length > 0 && (
-                <Button 
-                  variant="outline-light" 
-                  size="sm"
-                  onClick={() => dispatch(clearCart())}
-                >
-                  Clear Cart
-                </Button>
-              )}
+              <div>
+                {cartItems.length > 0 && (
+                  <>
+                    <Button 
+                      variant="outline-light" 
+                      size="sm"
+                      className="me-2"
+                      onClick={() => {
+                        const printWindow = window.open('', '_blank');
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Receipt Preview</title>
+                              <style>
+                                body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 20px; }
+                                .receipt { width: 300px; margin: 0 auto; }
+                                .header { text-align: center; margin-bottom: 20px; }
+                                .store-name { font-size: 18px; font-weight: bold; }
+                                .store-info { margin-bottom: 10px; }
+                                .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                                .item { display: flex; justify-content: space-between; margin-bottom: 5px; }
+                                .item-name { width: 60%; }
+                                .item-qty { width: 10%; text-align: center; }
+                                .item-price { width: 30%; text-align: right; }
+                                .totals { margin-top: 10px; }
+                                .total-line { display: flex; justify-content: space-between; }
+                                .grand-total { font-weight: bold; }
+                                .footer { text-align: center; margin-top: 20px; font-size: 10px; }
+                                @media print {
+                                  body { margin: 0; padding: 0; }
+                                  .receipt { width: 100%; }
+                                }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="receipt">
+                                <div class="header">
+                                  <div class="store-name">YOUR STORE NAME</div>
+                                  <div class="store-info">123 Main Street, City</div>
+                                  <div class="store-info">Phone: (123) 456-7890</div>
+                                  <div class="store-info">Date: ${new Date().toLocaleString()}</div>
+                                  ${selectedCustomer ? `<div class="store-info">Customer: ${selectedCustomer.name}</div>` : ''}
+                                </div>
+                                
+                                <div class="divider"></div>
+                                
+                                <div class="items">
+                                  <div class="item" style="font-weight: bold;">
+                                    <div class="item-name">Item</div>
+                                    <div class="item-qty">Qty</div>
+                                    <div class="item-price">Price</div>
+                                  </div>
+                                  ${cartItems.map(item => `
+                                    <div class="item">
+                                      <div class="item-name">${item.name}</div>
+                                      <div class="item-qty">${item.quantity}</div>
+                                      <div class="item-price">$${(item.price * item.quantity).toFixed(2)}</div>
+                                    </div>
+                                  `).join('')}
+                                </div>
+                                
+                                <div class="divider"></div>
+                                
+                                <div class="totals">
+                                  <div class="total-line">
+                                    <div>Subtotal:</div>
+                                    <div>$${total.toFixed(2)}</div>
+                                  </div>
+                                  <div class="total-line">
+                                    <div>Discount:</div>
+                                    <div>$${discount.toFixed(2)}</div>
+                                  </div>
+                                  <div class="total-line">
+                                    <div>Tax (10%):</div>
+                                    <div>$${((total - discount) * 0.1).toFixed(2)}</div>
+                                  </div>
+                                  <div class="total-line grand-total">
+                                    <div>TOTAL:</div>
+                                    <div>$${((total - discount) * 1.1).toFixed(2)}</div>
+                                  </div>
+                                </div>
+                                
+                                <div class="divider"></div>
+                                
+                                <div class="footer">
+                                  <p>Thank you for your purchase!</p>
+                                  <p>Please come again</p>
+                                </div>
+                              </div>
+                              <script>
+                                window.onload = function() { window.print(); }
+                              </script>
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                      }}
+                    >
+                      <FaPrint />
+                    </Button>
+                    <Button 
+                      variant="outline-light" 
+                      size="sm"
+                      onClick={() => dispatch(clearCart())}
+                    >
+                      Clear Cart
+                    </Button>
+                  </>
+                )}
+              </div>
             </Card.Header>
             
             <div className="customer-select-container">
@@ -552,6 +903,89 @@ const POS = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+      
+      {/* Save Order Modal */}
+      <Modal show={showSaveOrderModal} onHide={() => setShowSaveOrderModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Hold Order</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Order Name</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Enter a name for this order"
+              value={currentOrderName}
+              onChange={(e) => setCurrentOrderName(e.target.value)}
+            />
+            <Form.Text className="text-muted">
+              Give this order a name to easily identify it later.
+            </Form.Text>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowSaveOrderModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={confirmSaveOrder}>
+            Save Order
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      
+      {/* Saved Orders Modal */}
+      <Modal show={showSavedOrdersModal} onHide={() => setShowSavedOrdersModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Saved Orders</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {savedOrders.length > 0 ? (
+            <ListGroup>
+              {savedOrders.map(order => (
+                <ListGroup.Item key={order.id} className="saved-order-item">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h5>{order.name}</h5>
+                      <div className="text-muted">
+                        {new Date(order.timestamp).toLocaleString()} • 
+                        {order.customer ? ` ${order.customer.name} • ` : ' '}
+                        {order.items.length} items
+                      </div>
+                      <div className="mt-2">
+                        {order.items.slice(0, 3).map(item => (
+                          <Badge bg="secondary" className="me-1" key={item._id}>
+                            {item.name} x{item.quantity}
+                          </Badge>
+                        ))}
+                        {order.items.length > 3 && (
+                          <Badge bg="secondary">+{order.items.length - 3} more</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="d-flex flex-column">
+                      <div className="mb-2 text-end">
+                        <strong>${order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</strong>
+                      </div>
+                      <Button variant="primary" size="sm" onClick={() => handleLoadOrder(order)}>
+                        <FaShoppingBag className="me-1" /> Load Order
+                      </Button>
+                    </div>
+                  </div>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          ) : (
+            <div className="text-center py-5">
+              <p>No saved orders</p>
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
+      
+      {/* Hidden receipt template for printing */}
+      <div style={{ display: 'none' }}>
+        <div ref={receiptRef} id="receipt-template"></div>
+      </div>
     </Container>
   );
 };
