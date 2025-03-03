@@ -8,10 +8,15 @@ const Customer = require('../server/models/Customer');
 const Order = require('../server/models/Order');
 
 // Connect to MongoDB
+// Hardcode credentials since they're not in .env
+const mongoUser = 'admin';
+const mongoPassword = 'password';
+const mongoAuthSource = 'admin';
+
 // Construct connection string with auth credentials
 const mongoUri = process.env.MONGO_URI.includes('@') 
   ? process.env.MONGO_URI 
-  : process.env.MONGO_URI.replace('mongodb://', `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@`) + '?authSource=' + (process.env.MONGO_AUTH_SOURCE || 'admin');
+  : process.env.MONGO_URI.replace('mongodb://', `mongodb://${mongoUser}:${mongoPassword}@`) + '?authSource=' + mongoAuthSource;
 
 console.log('Connecting to MongoDB with auth...');
 mongoose.connect(mongoUri, {
